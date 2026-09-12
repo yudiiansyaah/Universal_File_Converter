@@ -1,11 +1,31 @@
 # Universal File Converter (Windows 11)
 
+## 📥 Download
+
+**[⬇️ Download UniversalFileConverter.exe (versi terbaru)](https://github.com/yudiiansyaah/Universal_File_Converter/releases/latest)**
+
+Klik link di atas → pilih file `UniversalFileConverter.exe` di bagian **Assets** →
+tunggu download selesai → double-click untuk menjalankan. Tidak perlu install
+Python atau apa pun.
+
+> ⚠️ Windows mungkin menampilkan peringatan **"Windows protected your PC"**
+> saat pertama kali dibuka (karena aplikasi ini belum memakai digital
+> signature berbayar). Ini normal untuk software gratis/indie — klik
+> **"More info" → "Run anyway"** untuk melanjutkan.
+
+---
+
 Aplikasi desktop untuk mengonversi file secara **batch** antar berbagai format,
 mengikuti daftar referensi format yang kamu berikan: Dokumen, Spreadsheet,
 Presentasi, Gambar, Audio, Video, Arsip, dan Data Terstruktur (JSON/YAML/XML/TOML/INI).
 
 Dibangun dengan **Python + PySide6 (Qt)**. Bisa dijalankan langsung dengan Python,
 atau di-build jadi satu file `.exe` mandiri dengan PyInstaller.
+
+> 📦 **Catatan untuk yang meng-clone repo ini:** file `.exe` **tidak** ikut
+> di source code (ukurannya ~278MB, melebihi batas ukuran file git) —
+> download dari tautan **Releases** di atas, atau build sendiri dari source
+> mengikuti panduan di bawah.
 
 ---
 
