@@ -210,6 +210,18 @@ class MainWindow(QMainWindow):
                 "memakai Microsoft Word yang terpasang."
             )
 
+        # Spreadsheet -> PDF hanya butuh SALAH SATU: LibreOffice atau MS Excel
+        if not status["soffice"] and not status["excel"]:
+            warnings.append(
+                "- Spreadsheet ke PDF/ODS: install LibreOffice ATAU pastikan "
+                "Microsoft Excel terpasang (Excel tidak mendukung ekspor ke .ods)."
+            )
+        elif not status["soffice"] and status["excel"]:
+            warnings.append(
+                "- Spreadsheet ke PDF: LibreOffice tidak terdeteksi, akan otomatis "
+                "memakai Microsoft Excel (khusus .ods tetap butuh LibreOffice)."
+            )
+
         if not status["ffmpeg"]:
             warnings.append("- Audio & Video: install FFmpeg (ffmpeg.org).")
 
