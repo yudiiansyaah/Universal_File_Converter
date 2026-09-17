@@ -388,6 +388,74 @@ def _read_tabular(input_path: str):
     raise ConversionError(f"Format tabular '{ext}' belum didukung pembacaannya.")
 
 
+def convert_via_excel(input_path: str, target_ext: str, output_dir: str, log=print) -> str:
+    """Konversi spreadsheet lewat Microsoft Excel (Windows COM automation).
+    Excel hanya bisa export ke PDF (tidak ke .ods)."""
+    if target_ext != "pdf":
+        raise ConversionError(f"Microsoft Excel tidak mendukung ekspor ke '.{target_ext}'.")
+    try:
+        import win32com.client
+    except ImportError:
+        raise ConversionError(
+            "Butuh pustaka 'pywin32' untuk memakai Microsoft Excel. "
+            "Jalankan: pip install pywin32"
+        )
+    os.makedirs(output_dir, exist_ok=True)
+    stem = Path(input_path).stem
+    output_path = os.path.abspath(os.path.join(output_dir, f"{stem}.pdf"))
+    input_abspath = os.path.abspath(input_path)
+
+    log("Membuka Microsoft Excel (mode background)...")
+    excel = win32com.client.DispatchEx("Excel.Application")
+    excel.Visible = False
+    excel.DisplayAlerts = False
+    try:
+        wb = excel.Workbooks.Open(input_abspath, ReadOnly=True)
+        try:
+            log("Menyimpan sebagai .pdf lewat Excel...")
+            wb.ExportAsFixedFormat(0, output_path)  # 0 = xlTypePDF
+        finally:
+            wb.Close(False)
+    finally:
+        excel.Quit()
+
+    if not os.path.isfile(output_path):
+        raise ConversionError("Excel selesai tapi file output tidak ditemukan.")
+    return output_path
+
+
+def convert_spreadsheet_to_pdf_lightweight(input_path: str, output_path: str, log=print):
+    """Fallback murni Python (tanpa Excel/LibreOffice): render tabel ke PDF
+    pakai reportlab. Layout sederhana (grid tabel polos), tidak ada styling asli."""
+    try:
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+        from reportlab.lib.units import cm
+    except ImportError:
+        raise ConversionError(
+            "Butuh pustaka 'reportlab' untuk membuat PDF tanpa Excel/LibreOffice. "
+            "Jalankan: pip install reportlab"
+        )
+    df = _read_tabular(input_path)
+    log("Membuat PDF sederhana dari tabel (tanpa styling asli)...")
+
+    data = [list(df.columns)] + df.astype(str).values.tolist()
+    doc = SimpleDocTemplate(output_path, pagesize=landscape(A4),
+                             leftMargin=1 * cm, rightMargin=1 * cm,
+                             topMargin=1 * cm, bottomMargin=1 * cm)
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2f6feb")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.whitesmoke]),
+    ]))
+    doc.build([table])
+    return output_path
+
+
 def convert_spreadsheet(input_path: str, target_ext: str, output_path: str, log=print):
     src_ext = Path(input_path).suffix.lower().lstrip(".")
 
@@ -396,9 +464,21 @@ def convert_spreadsheet(input_path: str, target_ext: str, output_path: str, log=
     if src_ext in STRUCTURED_SOURCE_EXTS and target_ext in STRUCTURED_TARGET_EXTS:
         return convert_structured_data(input_path, target_ext, output_path, log=log)
 
-    # xlsx/xls/ods/pdf yang butuh render -> LibreOffice
+    # xlsx/xls/ods/pdf yang butuh render -> LibreOffice, lalu fallback Excel/mode ringan
     if target_ext in ("ods", "pdf"):
-        return convert_via_libreoffice(input_path, target_ext, str(Path(output_path).parent), log=log)
+        output_dir = str(Path(output_path).parent)
+        if dependencies.find_soffice():
+            return convert_via_libreoffice(input_path, target_ext, output_dir, log=log)
+        if target_ext == "pdf" and dependencies.find_excel():
+            log("LibreOffice tidak ditemukan, memakai Microsoft Excel...")
+            return convert_via_excel(input_path, target_ext, output_dir, log=log)
+        if target_ext == "pdf":
+            log("LibreOffice & Excel tidak ditemukan, memakai mode ringan (tabel polos)...")
+            return convert_spreadsheet_to_pdf_lightweight(input_path, output_path, log=log)
+        raise ConversionError(
+            "Konversi ke .ods butuh LibreOffice terpasang (Excel tidak mendukung format ini, "
+            "dan belum ada mode ringan Python untuk .ods)."
+        )
 
     if pd is None:
         raise ConversionError("Butuh pustaka 'pandas'. Jalankan: pip install pandas openpyxl")

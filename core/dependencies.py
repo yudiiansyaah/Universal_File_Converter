@@ -25,7 +25,30 @@ def find_soffice() -> str | None:
     return None
 
 
-def find_word() -> str | None:
+def find_excel() -> str | None:
+    """Cari instalasi Microsoft Excel (untuk automation via COM, Windows only)."""
+    import os
+    candidates = [
+        r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE",
+        r"C:\Program Files (x86)\Microsoft Office\root\Office16\EXCEL.EXE",
+        r"C:\Program Files\Microsoft Office\Office16\EXCEL.EXE",
+        r"C:\Program Files (x86)\Microsoft Office\Office16\EXCEL.EXE",
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    try:
+        import winreg
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, r"Excel.Application\CurVer") as k:
+                val, _ = winreg.QueryValueEx(k, "")
+                if val:
+                    return "Excel.Application"
+        except FileNotFoundError:
+            pass
+    except ImportError:
+        pass
+    return None
     """Cari instalasi Microsoft Word (untuk automation via COM, Windows only)."""
     import os
     candidates = [
@@ -65,6 +88,7 @@ def check_all() -> dict:
         "soffice": find_soffice(),
         "ffmpeg": find_ffmpeg(),
         "word": find_word(),
+        "excel": find_excel(),
     }
 
 
